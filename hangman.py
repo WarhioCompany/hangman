@@ -20,12 +20,12 @@ async def on_reaction_add(reaction, user):
             await reaction.message.channel.send('Game has been stopped')
 
 
-@bot.command(name="/Hangman")
+@bot.command(name="k!Hangman")
 async def Hangman(ctx, user1: discord.User, user2: discord.User, chan: discord.TextChannel):
     await hangman_command(ctx, user1, user2, chan)
 
 
-@bot.command(name="/hangman")
+@bot.command(name="k!hangman")
 async def hangman(ctx, user1: discord.User, user2: discord.User, chan: discord.TextChannel):
     await hangman_command(ctx, user1, user2, chan)
 
@@ -109,7 +109,7 @@ async def on_message(message):
                 if json_check(game):
                     await game['channel'].send(f'Run out of time! Now is turn <@{game["player" + str(game["turn"])]}>')
 
-    elif message.content.startswith('/'):
+    elif message.content.startswith('k!'):
         await bot.process_commands(message)
 
 
