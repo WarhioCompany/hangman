@@ -1,9 +1,11 @@
 import discord
+from discord.ui import Button, View
 from discord.ext import commands, tasks
 import threading
 import asyncio
 import time
-TOKEN = "ODU2NTg3OTA0NDY5MDQxMTgz.YNDNpw.FkNsuanNWzJJY-PaZcsOTuQ4a_E"
+
+TOKEN = "ODA2MjQwNjQ3MzI1NDE3NTU0.YBmkHQ.GZFa1tofKaIxPg9UPrXDosdBoJ4"
 
 bot = commands.Bot(command_prefix='')
 
@@ -11,13 +13,8 @@ games = []
 
 
 @bot.event
-async def on_reaction_add(reaction, user):
-    if reaction.emoji == '🛑':
-        json = find_json(user.id)
-        if json != '':
-            games.remove(json)
-            print(games)
-            await reaction.message.channel.send('Game has been stopped')
+async def on_ready():
+    print('We have logged in as {0.user}'.format(bot))
 
 
 @bot.command(name="k!Hangman")
@@ -37,9 +34,8 @@ def generate_embed(text):
 async def hangman_command(ctx, user1, user2, chan):
     if find_json(user1.id) == '' and find_json(user2.id):
         await ctx.send('Game with these players already exists')
-        return
+        returnф
     word = ' '.join(ctx.message.content.split()[4:])
-    msg = await ctx.send(embed=generate_embed(f"<@{user1.id}> & <@{user2.id}>\nWord: {word}"))
 
     j = {
         "player1": user1.id,
@@ -48,26 +44,43 @@ async def hangman_command(ctx, user1, user2, chan):
         "channel": chan,
         "word": word.lower(),
         "letters": [],
-        "messages": [msg],
         "id": len(games)
     }
     i = len(games)
 
-    await msg.add_reaction('🛑')
+    button = Button(label="Stop Game", style=discord.ButtonStyle.red)
+
+    async def callback(interaction):
+        if interaction.user.id == user1.id or interaction.user.id == user2.id:
+            games.remove(j)
+            await interaction.channel.send('Game has been stopped')
+
+    button.callback = callback
+
+    view = View()
+    view.add_item(button)
+
+    msg = await ctx.send(
+        embed=generate_embed(f"<@{user1.id}> & <@{user2.id}>\nWord: {word}"),
+        view=view
+    )
+
+    j['messages'] = [msg]
+
     games.append(j)
     j['messages'].append(await chan.send(embed=generate_embed(f"Welcome to Hangman\n<@{user1.id}> vs <@{user2.id}>")))
 
 
 async def parse_message(text, json):
-    if text.lower().startswith('>'):
-        if len(text) > 1:
-            if json['word'] == ' '.join(text[1:].split()):
-                await json['channel'].send('Correct!')
-                for i in ''.join(text[1:].split()):
-                    if i not in json['letters']:
-                        json['letters'].append(i)
-            else:
-                await json['channel'].send('Incorrect')
+    if text.lower().startswith('>') and len(text) > 1:
+        if json['word'] == ' '.join(text[1:].split()):
+            await json['channel'].send('Correct!')
+            for i in ''.join(text[1:].split()):
+                if i not in json['letters']:
+                    json['letters'].append(i)
+        else:
+            await json['channel'].send('Incorrect')
+            switch_turn(json)
     elif len(text) != 1 or text in json['letters']:
         await json['channel'].send("Повторите попытку")
         return False
@@ -84,7 +97,8 @@ async def parse_message(text, json):
 
 @bot.event
 async def on_message(message):
-    if message.author.id == bot.user.id and len(message.embeds) == 1 and message.embeds[0].description.startswith('Welcome to Hangman'):
+    if message.author.id == bot.user.id and len(message.embeds) == 1 and message.embeds[0].description.startswith(
+            'Welcome to Hangman'):
         time.sleep(2)
         game = {}
         for game in games:
@@ -144,7 +158,8 @@ async def generate_hangman_message(json):
         s += f"**\n**Word is guessed!**\nWinner: <@{json['player' + str(json['turn'])]}>"
         games.remove(json)
         for i in json['messages']:
-            await i.edit(embed=generate_embed(i.embeds[0].description + f"\n<@{json['player' + str(json['turn'])]}> won!"))
+            await i.edit(
+                embed=generate_embed(i.embeds[0].description + f"\n<@{json['player' + str(json['turn'])]}> won!"))
     else:
         s += "**\n\nUse >word if you know the word\n<a:30sec:917153751465353237><a:10sec:917153782889078784>"
     return s
