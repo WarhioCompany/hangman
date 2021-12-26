@@ -1,13 +1,14 @@
 import discord
-from discord.ui import Button, View
 from discord.ext import commands, tasks
+from discord_buttons_plugin import *
 import threading
 import asyncio
 import time
 
-TOKEN = "ODA2MjQwNjQ3MzI1NDE3NTU0.YBmkHQ.GZFa1tofKaIxPg9UPrXDosdBoJ4"
+TOKEN = "TOKEN"
 
 bot = commands.Bot(command_prefix='')
+buttons = ButtonsClient(bot)
 
 games = []
 
@@ -34,7 +35,7 @@ def generate_embed(text):
 async def hangman_command(ctx, user1, user2, chan):
     if find_json(user1.id) == '' and find_json(user2.id):
         await ctx.send('Game with these players already exists')
-        returnф
+        return
     word = ' '.join(ctx.message.content.split()[4:])
 
     j = {
@@ -46,29 +47,39 @@ async def hangman_command(ctx, user1, user2, chan):
         "letters": [],
         "id": len(games)
     }
-    i = len(games)
-
-    button = Button(label="Stop Game", style=discord.ButtonStyle.red)
-
-    async def callback(interaction):
-        if interaction.user.id == user1.id or interaction.user.id == user2.id:
-            games.remove(j)
-            await interaction.channel.send('Game has been stopped')
-
-    button.callback = callback
-
-    view = View()
-    view.add_item(button)
 
     msg = await ctx.send(
         embed=generate_embed(f"<@{user1.id}> & <@{user2.id}>\nWord: {word}"),
-        view=view
+    )
+
+    await buttons.send(
+        content="‎",
+        channel=ctx.channel.id,
+        components=[
+            ActionRow([
+                Button(
+                    label="Stop Game",
+                    style=ButtonType().Danger,
+                    custom_id='stop_game'
+                )
+            ])
+        ]
     )
 
     j['messages'] = [msg]
 
     games.append(j)
     j['messages'].append(await chan.send(embed=generate_embed(f"Welcome to Hangman\n<@{user1.id}> vs <@{user2.id}>")))
+
+
+@buttons.click
+async def stop_game(interaction):
+    json = find_json(interaction.member.id)
+    if json != '':
+        if interaction.member.id == json['player1'] or interaction.member.id == json['player2']:
+            games.remove(json)
+            await interaction.message.delete()
+            await interaction.channel.send('Game has been stopped')
 
 
 async def parse_message(text, json):
@@ -113,11 +124,11 @@ async def on_message(message):
         def json_check(j):
             return j in games
 
-        m = ''
         while json_check(game):
             try:
                 m = await bot.wait_for('message', check=check, timeout=30)
-                await parse_message(m.content.lower(), game)
+                if json_check(game):
+                    await parse_message(m.content.lower(), game)
             except asyncio.TimeoutError:
                 switch_turn(game)
                 if json_check(game):
@@ -150,7 +161,7 @@ async def generate_hangman_message(json):
             s += str(i).upper()
             count += 1
         elif i == ' ':
-            s += '\t'
+            s += '\n'
             count += 1
         else:
             s += "🔵"
