@@ -39,6 +39,7 @@ async def hangman_command(ctx, user1, user2, chan):
     word = ' '.join(ctx.message.content.split()[4:])
 
     j = {
+        'author': ctx.author.id,
         "player1": user1.id,
         "player2": user2.id,
         "turn": 1,
@@ -76,7 +77,7 @@ async def hangman_command(ctx, user1, user2, chan):
 async def stop_game(interaction):
     json = find_json(interaction.member.id)
     if json != '':
-        if interaction.member.id == json['player1'] or interaction.member.id == json['player2']:
+        if interaction.member.id == json['author']:
             games.remove(json)
             await interaction.message.delete()
             await interaction.channel.send('Game has been stopped')
