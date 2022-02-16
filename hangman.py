@@ -33,8 +33,8 @@ def generate_embed(text):
 
 
 async def hangman_command(ctx, user1, user2, chan):
-    if find_json(user1.id) == '' and find_json(user2.id):
-        await ctx.send('Game with these players already exists')
+    if find_json(user1.id, user2.id) != '':
+        await ctx.send('Game with one of these players already exists')
         return
     word = ' '.join(ctx.message.content.split()[4:])
 
@@ -146,10 +146,14 @@ def switch_turn(json):
         json['turn'] = 1
 
 
-def find_json(user):
+def find_json(user, sub=''):
     for i in games:
-        if i['player1'] == user or i['player2'] == user:
-            return i
+        for key in i:
+            if i[key] == user or (key != 'author' and i[key] == sub):
+                return i
+
+        #if i['player1'] == user or i['']or i['player2'] == user or i['author'] == user:
+        #    return i
     return ''
 
 
